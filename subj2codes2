@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# this scripts rename participants and stores the transformation table
+
+usage() {
+	echo "usage:"
+	echo "To anonymize directory, do:"
+	echo "	$0 path/to/data_directory path/to/conversion_table.csv"
+	echo
+}
+
+if [[ $# != 2 ]]; then
+#  indir='/home/filipdechterenko/Documents/data/MRI/SCFC_studie/cleandata/'
+	echo "ERROR: Wrong number of arguments"
+	usage
+	exit 1
+else
+	indir="$1"
+	convert_table="$2"
+	echo "Working in dir $indir as specified in file $convert_table"
+	if [ ! -d "$indir" ] ; then 
+		echo "ERROR: 1st argument should be directory"
+		usage
+		exit 1
+	fi
+	if [ ! -f "$convert_table" ] ; then 
+		echo "ERROR: 2st argument should be regular file"
+		usage
+		exit 1
+	fi
+fi
+
+#convert_table='/home/tonda/data/MRI/SCFC_scripts/rename_subjects/filenames_data.csv'
+
+
+for fn in `find $indir -maxdepth 1 -mindepth 1 -type d`; do
+	bfn=`basename $fn`  
+	# echo $bfn
+	#in case of , in subject name, find number of fields
+	numFields=`cat $convert_table |grep $bfn| tr ',' '\n' | wc -l | tr -d ' ' `
+	if [[ $numFields != 0 ]]; then
+		#echo $numFields
+		id=`cat $convert_table |grep $bfn| cut -d ',' -f $(( $numFields - 1 ))`
+		#strip from " in name
+		match=`cat $convert_table |grep $bfn| cut -d ',' -f 2-$(( $numFields - 2 )) | sed 's/\"//g'`
+		# echo $bfn
+		# echo $match
+		#force exact match
+		if [[ _$bfn == _$match ]]; then
+			#  if [ ! -z "$id" ]; then
+			if [ -d `dirname $fn`/$id ]; then
+				echo "INFO: `dirname $fn`/$id already exists, not doing anything with $bfn"
+			else
+				echo mv "$fn" "`dirname $fn`/$id"
+				mv "$fn" "`dirname $fn`/$id"
+			fi
+		else 
+			echo "INFO: no exact match for $bfn : $match or already anonymized dir."
+		fi
+	else
+		echo "INFO: no match for $bfn"
+	fi
+done
